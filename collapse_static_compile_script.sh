@@ -9,12 +9,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-
+echo "collapse static:"
 echo "$1 THREADS:"
 # Run the executable 10 times
 for i in {1..10}; do
     echo "Run #$i:"
-    export OMP_NUM_THREADS=$1; ./collapse_static_transpose
+    export OMP_NUM_THREADS="$1"; ./collapse_static_transpose
     echo "------------------------"
 done
 
