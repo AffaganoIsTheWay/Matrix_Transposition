@@ -77,7 +77,7 @@ int main()
     double duration_serial = (end_serial - start_serial);
 
 
-    for (int num_thread = 1; num_thread <= 64; num_thread++)
+    for (int num_thread = 1; num_thread <= 4; num_thread++)
     {
         for (int i = 0; i < 10; i++)
         {

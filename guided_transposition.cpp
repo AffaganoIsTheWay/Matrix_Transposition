@@ -1,9 +1,5 @@
 #include <iostream>
-#include <ctime>
-#include <sys/time.h>
-#ifdef _OPENMP
 #include <omp.h>
-#endif
 
 using namespace std;
 
@@ -22,7 +18,6 @@ void transpose_serial(int** matrix, int** transposed) {
 
 
 // Function to transpose a matrix using OpenMP
-#ifdef _OPENMP
 void transpose_parallel_guided(int** matrix,int** transposed) {
     // Parallelize the outer loop with guided schedule
 #pragma omp parallel for schedule(guided)
@@ -44,7 +39,6 @@ bool check_transpose(int** transposed_serial,int** transposed_parallel){
 
     return true;
 }
-#endif
 
 int main() {
     int** matrix = new int*[MAX_ROWS];
@@ -70,12 +64,12 @@ int main() {
         
     }
 
-    clock_t start_serial = clock();
+    double start_serial = omp_get_wtime();
 
     transpose_serial(matrix, transposed_serial);
 
-    clock_t end_serial = clock();
-    double duration_serial = static_cast<double>(end_serial - start_serial) / CLOCKS_PER_SEC;
+    double end_serial = omp_get_wtime();
+    double duration_serial = (end_serial - start_serial);
     double data_transferred = 2.0 * MAX_COLS * MAX_ROWS * sizeof(int);
     double bandwidth_serial = data_transferred / (duration_serial * 1e9);
 
@@ -83,7 +77,6 @@ int main() {
     std::cout << "Effective Serial Bandwidth: " << bandwidth_serial << " GB/s" << endl << endl;
 
 
-#ifdef _OPENMP
     start_parallel = omp_get_wtime();
 
     transpose_parallel_guided(matrix, transposed_parallel);
@@ -96,7 +89,6 @@ int main() {
     cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl << endl;
 
     cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel) << endl;
-#endif
 
     // Cleanup memory
     for (int i = 0; i < MAX_ROWS; i++) {
