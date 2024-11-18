@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]; then
+if [ $# -lt 3 ]; then
   echo "Too few arguments"
     exit 1
 fi
@@ -14,5 +14,5 @@ for script in *.sh; do
 
   # Execute the script and pass along any arguments
   echo "Executing $script..."
-  bash "$script" "$1"
+  bash "$script" "$1" "$2" "$3"
 done
