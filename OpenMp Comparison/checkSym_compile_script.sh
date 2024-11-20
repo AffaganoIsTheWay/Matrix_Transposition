@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Check argument
-if [ $# -lt 2 ]; then
+if [ $# -lt 3 ]; then
   echo "Too few arguments"
     exit 1
 fi
 
 # Compile the C++ file
-g++ -o explicit_unroll Explicit_unroll.cpp -fopenmp
+g++ -o checkSym_comparison checkSym_comparison.cpp -fopenmp
 
 # Check if the compilation was successful
 if [ $? -ne 0 ]; then
@@ -15,12 +15,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Explicit enroll:"
+echo "Static with $2 THREADS:"
 # Run the executable 10 times
 for i in $( eval echo {1..$1} ); do
     echo "Run #$i:"
-    ./explicit_unroll "$2"
+    export OMP_NUM_THREADS="$2"; ./checkSym_comparison "$3"
     echo "------------------------"
 done
 
-rm explicit_unroll
+rm checkSym_comparison

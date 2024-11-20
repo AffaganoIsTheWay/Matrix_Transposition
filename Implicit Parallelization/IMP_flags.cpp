@@ -20,15 +20,16 @@ void matTranspose(float** transposed, int N) {
 }
 
 bool checkSym(float** matrix, int N){
+    bool isSymmetric = 1;
     for (int i = 0; i < N; i++) {
         for (int j = i+1; j < N; j++) {
             if(matrix[i][j] != matrix[j][i]){
-                return false;
+                isSymmetric = 0;
             }
         }
     }
 
-    return true;
+    return isSymmetric;
 }
 
 int main(int argc, const char* argv[]) {

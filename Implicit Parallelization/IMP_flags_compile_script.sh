@@ -11,12 +11,22 @@ OPT_FLAGS=(
     "-O1"
     "-funroll-loops"
     "-floop-unroll-and-jam"
-    "-fprefetch-loop-arrays "
+    "-fprefetch-loop-arrays"
     "-ftree-vectorize"
     "-funroll-loops -O1"
     "-floop-unroll-and-jam -O1"
     "-fprefetch-loop-arrays -O1"
     "-ftree-vectorize -O1"
+    "-funroll-loops -fprefetch-loop-arrays"
+    "-funroll-loops -ftree-vectorize"
+    "-floop-unroll-and-jam -fprefetch-loop-arrays"
+    "-floop-unroll-and-jam -ftree-vectorize"
+    "-funroll-loops -fprefetch-loop-arrays -O1"
+    "-funroll-loops -ftree-vectorize -O1"
+    "-floop-unroll-and-jam -fprefetch-loop-arrays -O1"
+    "-floop-unroll-and-jam -ftree-vectorize -O1"
+    "-funroll-loops -fprefetch-loop-arrays -ftree-vectorize -O1"
+    "-floop-unroll-and-jam -fprefetch-loop-arrays -ftree-vectorize -O1"
 )
 
 # Loop over each optimization flag

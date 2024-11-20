@@ -6,15 +6,32 @@
 using namespace std;
 
 // Function to transpose a matrix
-void transpose_serial(int** matrix, int** transposed, int N) {
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) {
-            transposed[j][i] = matrix[i][j];
+void matTranspose(float** transposed, int N) {
+    int temp;
+    for (int i = 0; i < N; i++) {
+        for (int j = i+1; j < N; j++) {
+            if(transposed[i][j] != transposed[j][i]){
+                temp = transposed[i][j];
+                transposed[i][j] = transposed[j][i];
+                transposed[j][i] = temp;
+            }
         }
     }
 }
 
-bool check_transpose(int** transposed_serial,int** transposed_parallel, int N){
+bool checkSym(float** matrix, int N){
+    for (int i = 0; i < N; i++) {
+        for (int j = i+1; j < N; j++) {
+            if(matrix[i][j] != matrix[j][i]){
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool check_transpose(float** transposed_serial,float** transposed_parallel, int N){
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             if(transposed_serial[i][j] != transposed_parallel[i][j]){
@@ -27,59 +44,83 @@ bool check_transpose(int** transposed_serial,int** transposed_parallel, int N){
 }
 
 // Function to transpose a matrix using OpenMP
-void transpose_parallel_guided(int** matrix,int** transposed, int N ) {
-    // Parallelize the outer loop with guided schedule
-#pragma omp parallel for schedule(guided)
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) {
-            transposed[j][i] = matrix[i][j];
+void matTransposeOMP(float** transposed, int N) {
+    int temp;
+// Parallelize the outer loop with static schedule
+#pragma omp parallel for schedule(guided) private(temp)
+    for (int i = 0; i < N; i++) {
+        for (int j = i+1; j < N; j++) {
+            if(transposed[i][j] != transposed[j][i]){
+                temp = transposed[i][j];
+                transposed[i][j] = transposed[j][i];
+                transposed[j][i] = temp;
+            }
         }
     }
 }
 
+bool checkSymOMP(float** matrix, int N){
+    bool isSymmetric = 1;
+#pragma omp parallel for schedule(guided) shared(matrix, isSymmetric)
+    for (int i = 0; i < N; i++) {
+        for (int j = i+1; j < N; j++) {
+            if(matrix[i][j] != matrix[j][i]){
+                #pragma omp critical
+                isSymmetric = 0;
+                #pragma omp cancel for
+            }
+        }
+        #pragma omp cancellation point for
+    }
+
+    return isSymmetric;
+}
+
 int main(int argc, const char* argv[]) {
     int N = atoi( argv[1] );
-    int** matrix = new int*[N];
-    int** transposed_serial = new int*[N];
-    int** transposed_parallel = new int*[N];
-
-    double start_parallel, end_parallel, duration_parallel, bandwidth_parallel;
+    float** matrix = new float*[N];
+    float** transposed_serial = new float*[N];
+    float** transposed_parallel = new float*[N];
 
     srand(time(NULL));
     
     //Inizialize the matrix
     for (int i = 0; i < N; i++){
-        matrix[i] = new int[N];
-        transposed_serial[i] = new int[N];
-        transposed_parallel[i] = new int[N];
+        matrix[i] = new float[N];
+        transposed_serial[i] = new float[N];
+        transposed_parallel[i] = new float[N];
         for (int j = 0; j < N; j++){
-            matrix[i][j] = rand() % 100 + 1;
+            matrix[i][j] = (float)(rand() % 100 + 1);
+            transposed_serial[i][j] = matrix[i][j];
+            transposed_parallel[i][j] = matrix[i][j];
         }
-        
     }
 
     double start_serial = omp_get_wtime();
 
-    transpose_serial(matrix, transposed_serial, N);
+    if(!checkSym(matrix, N)){
+        matTranspose(transposed_serial, N);
+    }
 
     double end_serial = omp_get_wtime();
     double duration_serial = (end_serial - start_serial);
-    double data_transferred = 2.0 * N * N * sizeof(int);
+    double data_transferred = 4.0 * (N * N) * sizeof(float);
     double bandwidth_serial = data_transferred / (duration_serial * 1e9);
 
     std::cout << "Time taken by serial: " << duration_serial << " seconds" << endl;
     std::cout << "Effective Serial Bandwidth: " << bandwidth_serial << " GB/s" << endl << endl;
 
+    double start_parallel = omp_get_wtime();
 
-    start_parallel = omp_get_wtime();
+    if(!checkSym(matrix, N)){
+        matTransposeOMP(transposed_parallel, N);
+    }
 
-    transpose_parallel_guided(matrix, transposed_parallel, N);
+    double end_parallel = omp_get_wtime();
+    double duration_parallel = (end_parallel - start_parallel);
+    double bandwidth_parallel = data_transferred / (duration_parallel * 1e9);
 
-    end_parallel = omp_get_wtime();
-    duration_parallel = (end_parallel - start_parallel);
-    bandwidth_parallel = data_transferred / (duration_parallel * 1e9);
-
-    cout << "Time taken by parallel Guided: " << duration_parallel << " seconds" << endl;
+    cout << "Time taken by parallel Static: " << duration_parallel << " seconds" << endl;
     cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl << endl;
 
     cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
@@ -87,13 +128,10 @@ int main(int argc, const char* argv[]) {
     // Cleanup memory
     for (int i = 0; i < N; i++) {
         delete[] matrix[i];
-    }
-    delete[] matrix;
-
-    for (int i = 0; i < N; i++) {
         delete[] transposed_serial[i];
         delete[] transposed_parallel[i];
     }
+    delete[] matrix;
     delete[] transposed_serial;
     delete[] transposed_parallel;
 

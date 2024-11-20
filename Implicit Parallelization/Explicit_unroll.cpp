@@ -7,10 +7,12 @@ using namespace std;
 
 // Function to transpose a matrix
 void matTransposeImp(float** transposed, int N) {
-    int temp, j;
+    int temp;
+
     for (int i = 0; i < N; ++i) {
-        for (j = i+1; j+4 < N; j += 4) {
-            // Unrolled body for 4 elements at a time
+        // Unrolled loop for 4 elements at a time
+        int j;
+        for (j = i + 1; j + 4 <= N; j += 4) {
             if (transposed[i][j] != transposed[j][i]) {
                 temp = transposed[i][j];
                 transposed[i][j] = transposed[j][i];
@@ -35,7 +37,9 @@ void matTransposeImp(float** transposed, int N) {
                 transposed[j + 3][i] = temp;
             }
         }
-        for(j; j < N; j++){
+
+        // Handle the remaining elements when N % 4 != 0
+        for (; j < N; j++) {
             if (transposed[i][j] != transposed[j][i]) {
                 temp = transposed[i][j];
                 transposed[i][j] = transposed[j][i];
@@ -46,30 +50,28 @@ void matTransposeImp(float** transposed, int N) {
 }
 
 bool checkSymImp(float** matrix, int N){
-    int j;
+    bool isSymmetric = 1;
+    
     for (int i = 0; i < N; i++) {
-        for (j = i+1; j+4 < N; j += 4) {
-            if(matrix[i][j] != matrix[j][i]){
-                return false;
-            }
-            if(matrix[i][j + 1] != matrix[j + 1][i]){
-                return false;
-            }
-            if(matrix[i][j + 2] != matrix[j + 2][i]){
-                return false;
-            }
-            if(matrix[i][j + 3] != matrix[j + 3][i]){
-                return false;
+        int j;
+        for (j = i + 1; j + 4 <= N; j += 4) {
+            if (matrix[i][j] != matrix[j][i] ||
+                matrix[i][j + 1] != matrix[j + 1][i] ||
+                matrix[i][j + 2] != matrix[j + 2][i] ||
+                matrix[i][j + 3] != matrix[j + 3][i]) {
+                isSymmetric = 0;
             }
         }
-        for (j; j < N; j++){
-            if(matrix[i][j] != matrix[j][i]){
-                return false;
+
+        // Handle remaining elements when N % 4 != 0
+        for (; j < N; j++) {
+            if (matrix[i][j] != matrix[j][i]) {
+                isSymmetric = 0;
             }
         }
     }
 
-    return true;
+    return isSymmetric;
 }
 
 void matTranspose(float** transposed, int N) {
@@ -86,15 +88,16 @@ void matTranspose(float** transposed, int N) {
 }
 
 bool checkSym(float** matrix, int N){
+    bool isSymmetric = 1;
     for (int i = 0; i < N; i++) {
         for (int j = i+1; j < N; j++) {
             if(matrix[i][j] != matrix[j][i]){
-                return false;
+                isSymmetric = 0;
             }
         }
     }
 
-    return true;
+    return isSymmetric;
 }
 
 bool checkTranspose(float** transposed_one, float** transposed_two, int N){
@@ -162,9 +165,11 @@ int main(int argc, const char* argv[]) {
     for (int i = 0; i < N; i++) {
         delete[] matrix[i];
         delete[] transposed[i];
+        delete[] transposed_IMP[i];
     }
     delete[] matrix;
     delete[] transposed;
+    delete[] transposed_IMP;
 
     return 0;
 }
