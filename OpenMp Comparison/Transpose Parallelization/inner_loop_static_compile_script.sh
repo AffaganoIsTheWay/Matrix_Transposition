@@ -7,7 +7,7 @@ if [ $# -lt 3 ]; then
 fi
 
 # Compile the C++ file
-g++ -o collapse_guided_transpose collapse_guided_transposition.cpp -fopenmp
+g++ -o inner_loop_static inner_loop_static.cpp -fopenmp
 
 # Check if the compilation was successful
 if [ $? -ne 0 ]; then
@@ -15,12 +15,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "collapse guided with $2 THREADS:"
+echo "Static Inner Loop with $2 THREADS:"
 # Run the executable 10 times
 for i in $( eval echo {1..$1} ); do
     echo "Run #$i:"
-    export OMP_NUM_THREADS="$2"; ./collapse_guided_transpose "$3"
+    export OMP_NUM_THREADS="$2"; ./inner_loop_static "$3"
     echo "------------------------"
 done
 
-rm collapse_guided_transpose
+rm inner_loop_static

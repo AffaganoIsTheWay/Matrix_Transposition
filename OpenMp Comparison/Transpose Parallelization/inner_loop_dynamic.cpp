@@ -46,11 +46,11 @@ bool check_transpose(float** transposed_serial,float** transposed_parallel, int 
 // Function to transpose a matrix using OpenMP
 void matTransposeOMP(float** transposed, int N) {
     int temp;
-// Parallelize the outer loop with static schedule
-#pragma omp parallel for schedule(static) private(temp)
+    // Parallelize the inner loop
     for (int i = 0; i < N; i++) {
-        for (int j = i+1; j < N; j++) {
-            if(transposed[i][j] != transposed[j][i]){
+        #pragma omp parallel for private(temp) schedule(dynamic)
+        for (int j = i + 1; j < N; j++) {
+            if(transposed[i][j] != transposed[j][i]) {
                 temp = transposed[i][j];
                 transposed[i][j] = transposed[j][i];
                 transposed[j][i] = temp;
@@ -59,23 +59,20 @@ void matTransposeOMP(float** transposed, int N) {
     }
 }
 
-bool checkSymOMP(float** matrix, int N){
-    bool isSymmetric = 1;
-#pragma omp parallel for schedule(static) shared(matrix, isSymmetric)
+bool checkSymOMP(float** matrix, int N) {
+    bool isSymmetric = true;
+
+    #pragma omp parallel for reduction(&&: isSymmetric)
     for (int i = 0; i < N; i++) {
-        for (int j = i+1; j < N; j++) {
-            if(matrix[i][j] != matrix[j][i]){
-                #pragma omp critical
-                isSymmetric = 0;
-                #pragma omp cancel for
+        for (int j = i + 1; j < N; j++) {
+            if (matrix[i][j] != matrix[j][i]) {
+                isSymmetric = false;
             }
         }
-        #pragma omp cancellation point for
     }
 
     return isSymmetric;
 }
-
 int main(int argc, const char* argv[]) {
     int N = atoi( argv[1] );
     float** matrix = new float*[N];
@@ -112,7 +109,7 @@ int main(int argc, const char* argv[]) {
 
     double start_parallel = omp_get_wtime();
 
-    if(!checkSym(matrix, N)){
+    if(!checkSymOMP(matrix, N)){
         matTransposeOMP(transposed_parallel, N);
     }
 

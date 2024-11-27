@@ -7,7 +7,7 @@ if [ $# -lt 3 ]; then
 fi
 
 # Compile the C++ file
-g++ -o collapse_static_transpose collapse_static_transposition.cpp -fopenmp
+g++ -o outer_loop_dynamic outer_loop_dynamic.cpp -fopenmp
 
 # Check if the compilation was successful
 if [ $? -ne 0 ]; then
@@ -15,12 +15,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "collapse static with $2 THREADS:"
+echo "Dynamic Outer Loop with $2 THREADS:"
 # Run the executable 10 times
 for i in $( eval echo {1..$1} ); do
     echo "Run #$i:"
-    export OMP_NUM_THREADS="$2"; ./collapse_static_transpose "$3"
+    export OMP_NUM_THREADS="$2"; ./outer_loop_dynamic "$3"
     echo "------------------------"
 done
 
-rm collapse_static_transpose
+rm outer_loop_dynamic

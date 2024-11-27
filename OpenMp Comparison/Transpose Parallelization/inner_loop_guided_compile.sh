@@ -7,7 +7,7 @@ if [ $# -lt 3 ]; then
 fi
 
 # Compile the C++ file
-g++ -o guided_transpose guided_transposition.cpp -fopenmp
+g++ -o inner_loop_guided inner_loop_guided.cpp -fopenmp
 
 # Check if the compilation was successful
 if [ $? -ne 0 ]; then
@@ -15,12 +15,12 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Guided with $2 THREADS:"
+echo "Guided Inner Loop with $2 THREADS:"
 # Run the executable 10 times
 for i in $( eval echo {1..$1} ); do
     echo "Run #$i:"
-    export OMP_NUM_THREADS="$2"; ./guided_transpose "$3"
+    export OMP_NUM_THREADS="$2"; ./inner_loop_guided "$3"
     echo "------------------------"
 done
 
-rm guided_transpose
+rm inner_loop_guided
