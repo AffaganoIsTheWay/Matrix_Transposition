@@ -82,6 +82,7 @@ bool checkSymOMP(float** matrix, int N) {
 
     return isSymmetric;
 }
+
 int main(int argc, const char* argv[]) {
     int N = atoi( argv[1] );
     float** matrix = new float*[N];

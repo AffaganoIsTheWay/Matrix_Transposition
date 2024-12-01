@@ -58,22 +58,6 @@ bool checkSym_atomic(float** matrix, int N) {
     return isSymmetric;
 }
 
-bool checkSym_collapse_critical(float** matrix, int N) {
-    bool isSymmetric = true;
-
-    #pragma omp parallel for collapse(2) // Parallelize both loops
-    for (int i = 0; i < N; i++) {
-        for (int j = i + 1; j < N; j++) {
-            if (matrix[i][j] != matrix[j][i]) {
-                #pragma omp critical
-                isSymmetric = false;
-            }
-        }
-    }
-
-    return isSymmetric;
-}
-
 int main(int argc, const char* argv[]) {
     int N = atoi( argv[1] );
     float** matrix = new float*[N];
@@ -114,15 +98,6 @@ int main(int argc, const char* argv[]) {
     double duration_atomic = (end_atomic - start_atomic);
 
     std::cout << "Time taken by atomic: " << duration_atomic << " seconds" << endl;
-
-    double start_collapse = omp_get_wtime();
-
-    cout << "collapse: " << checkSym_collapse_critical(matrix, N) << endl;
-
-    double end_collapse = omp_get_wtime();
-    double duration_collapse = (end_collapse - start_collapse);
-
-    cout << "Time taken by collapse: " << duration_collapse << " seconds" << endl;
 
     // Cleanup memory
     for (int i = 0; i < N; i++) {
