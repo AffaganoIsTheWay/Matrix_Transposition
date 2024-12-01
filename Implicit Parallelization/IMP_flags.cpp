@@ -60,8 +60,8 @@ int main(int argc, const char* argv[]) {
     double data_transferred = 4.0 * (N * N) * sizeof(int);
     double bandwidth = data_transferred / (duration * 1e9);
 
-    std::cout << "Time taken by serial: " << duration << " seconds" << endl;
-    std::cout << "Effective Serial Bandwidth: " << bandwidth << " GB/s" << endl << endl;
+    std::cout << "Time taken by this oprimization flag(s): " << duration << " seconds" << endl;
+    std::cout << "Effective Bandwidth: " << bandwidth << " GB/s" << endl << endl;
 
     // Cleanup memory
     for (int i = 0; i < N; i++) {
