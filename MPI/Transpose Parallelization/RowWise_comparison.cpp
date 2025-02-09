@@ -56,55 +56,49 @@ bool check_transpose(float **transposed_serial, float **transposed_parallel, int
 }
 
 // Function to transpose a matrix using MPI
-void matTransposeMPI(float **transposed, int N, int size, int rank)
-{
-    // Flatten the matrix for MPI operations
-    float *matrix_flat = (float *)malloc(N * N * sizeof(float));
-    float *local_matrix = (float *)malloc(N * N * sizeof(float));
+void matTransposeMPI(float **transposed, int N, int size, int rank) {
+    int row_per_process = N / size;
+    int row_start = rank * row_per_process;
+    int row_end = (rank + 1) * row_per_process;
 
-    // If rank 0, flatten the 2D matrix into a 1D array
-    if (rank == 0)
-    {
-        // Copy the 2D matrix to the 1D array for scattering
-        for (int i = 0; i < N; i++)
-        {
-            for (int j = 0; j < N; j++)
-            {
-                matrix_flat[i * N + j] = transposed[i][j];
-            }
+    float** local_matrix = new float*[N];
+    for(int i = 0; i < N; i++){
+        local_matrix[i] = new float[row_per_process];
+        for(int j = 0; j < row_per_process; j++){
+            local_matrix[i][j] = 0;
         }
     }
 
-    // Transpose the local portion of the matrix
-    int temp;
-    for (int i = 0; i < N; i++)
-    {
-        for (int j = i + 1; j < N; j++)
-        {
-            if (local_matrix[i * N + j] != local_matrix[j * N + i])
-            {
-                temp = local_matrix[i * N + j];
-                local_matrix[i * N + j] = local_matrix[j * N + i];
-                local_matrix[j * N + i] = temp;
-            }
+    for(int i = 0; i < N; i++){
+        for(int j = 0, x = row_start; j < row_per_process; j++, x++){
+            local_matrix[i][j] = transposed[x][i];
         }
     }
 
-    // If rank 0, copy back the data from the flat array to the 2D matrix
-    if (rank == 0)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            for (int j = 0; j < N; j++)
-            {
-                transposed[i][j] = matrix_flat[i * N + j];
-            }
+    int sizes[2] = {N, N};
+    int subsizes[2] = {1, row_per_process};
+    int start[2] = {0,0};
+    MPI_Datatype type, subarrtype;
+    MPI_Type_create_subarray(2, sizes, subsizes, start, MPI_ORDER_C, MPI_FLOAT, &type);
+    MPI_Type_create_resized(type, 0, row_per_process*sizeof(float), &subarrtype);
+    MPI_Type_commit(&subarrtype);
+
+    int sendcounts[row_per_process];
+    int displs[row_per_process];
+
+    if (rank == 0) {
+        int disp = 0;
+        for(int i = 0; i < row_per_process; i++){
+            sendcounts[i] = 1;
+            displs[i] = disp;
+            disp += 1;
         }
     }
 
-    // Free the allocated memory
-    free(matrix_flat);
-    free(local_matrix);
+    for(int i = 0; i < N; i++){
+        MPI_Gatherv(&(local_matrix[i][0]), row_per_process, MPI_FLOAT,
+                &(transposed[i][row_start]), sendcounts, displs, subarrtype, 0, MPI_COMM_WORLD);
+    }
 }
 
 bool checkSym_MPI(float **matrix, int N, int size, int rank)
@@ -137,6 +131,15 @@ bool checkSym_MPI(float **matrix, int N, int size, int rank)
 
     // The root process (rank 0) determines if the matrix is symmetric
     return global_result;
+}
+
+void printMatrix(float** matrix, int N){
+    for(int i = 0; i < N; i++){
+        for(int j = 0; j < N; j++){
+            cout << matrix[i][j] << " ";
+        }
+        cout << endl;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -208,31 +211,18 @@ int main(int argc, char *argv[])
         cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl
              << endl;
 
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < N; j++){
-                cout << matrix[i][j] << " ";
-            }
-            cout << endl;
-        }
+        /* cout << endl;
+
+        printMatrix(matrix, N);
 
         cout << endl;
 
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < N; j++){
-                cout << transposed_serial[i][j] << " ";
-            }
-            cout << endl;
-        }
+        printMatrix(transposed_serial, N);
 
         cout << endl;
 
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < N; j++){
-                cout << transposed_parallel[i][j] << " ";
-            }
-            cout << endl;
-        }
-
+        printMatrix(transposed_parallel, N);
+ */
         // Check
         cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
     }
