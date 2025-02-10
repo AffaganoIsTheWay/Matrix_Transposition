@@ -15,7 +15,7 @@ module load gcc91
 cd /home/giovanni.vitiello/Matrix_Transpose/
 
 # The code should be compiled before submitting the job
-g++ main.cpp -o main -fopenmp
+g++ OMP_main.cpp -o main -fopenmp
 
 # Run code
 export OMP_NUM_THREADS=64; ./main

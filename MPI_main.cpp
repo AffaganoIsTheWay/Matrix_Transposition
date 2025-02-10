@@ -1,7 +1,9 @@
 #include <iostream>
-#include <mpi.h>
 #include <ctime>
 #include <cstdlib>
+#include <fstream>
+#include <mpi.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -45,24 +47,8 @@ bool checkSym(float **matrix, int N)
     return true;
 }
 
-bool check_transpose(float **transposed_serial, float **transposed_parallel, int N)
-{
-    for (int i = 0; i < N; ++i)
-    {
-        for (int j = 0; j < N; ++j)
-        {
-            if (transposed_serial[i][j] != transposed_parallel[i][j])
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
 // Function to transpose a matrix using MPI
-void matTransposeMPI(float **transposed, int N, int size, int rank) {
+void matTransposeMPI(float** transposed, int N, int block_Matrix_size, int num_thread) {
     int row_per_process = N / size;
     int row_start = rank * row_per_process;
     int row_end = (rank + 1) * row_per_process;
@@ -107,7 +93,7 @@ void matTransposeMPI(float **transposed, int N, int size, int rank) {
     }
 }
 
-bool checkSym_MPI(float **matrix, int N, int size, int rank)
+bool checkSymMPI(float **matrix, int N, int num_thread)
 {
     bool local_result = true;
     int block_size = N / size;
@@ -139,92 +125,93 @@ bool checkSym_MPI(float **matrix, int N, int size, int rank)
     return global_result;
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-    int N = atoi(argv[1]);
-    float **matrix = new float *[N];
-    float **transposed_serial = new float *[N];
-    float **transposed_parallel = new float *[N];
 
-    srand(time(NULL));
-
-    // Inizialize the matrix
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-        transposed_serial[i] = new float[N];
-        transposed_parallel[i] = new float[N];
-        for (int j = 0; j < N; j++)
-        {
-            matrix[i][j] = (float)(rand() % 100 + 1);
-            transposed_serial[i][j] = matrix[i][j];
-            transposed_parallel[i][j] = matrix[i][j];
-        }
-    }
-
-    // Inizialize MPI
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Serial
-
-    double start_serial = MPI_Wtime();
-
-    if (!checkSym(matrix, N))
-    {
-        matTranspose(transposed_serial, N);
+    if(rank == 0) {
+        ofstream ResultFile;
+        ResultFile.open("result.csv", ios_base::app);
     }
 
-    double end_serial = MPI_Wtime();
-    double duration_serial = (end_serial - start_serial);
-    double data_transferred = 2.0 * (N * N) * sizeof(float);
-    double bandwidth_serial = data_transferred / (duration_serial * 1e9);
-
-    // Row Wise
-
-    double start_parallel = MPI_Wtime();
-
-    if (!checkSym_MPI(matrix, N, size, rank))
+    int Matrix_size[] = {16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+    for (int i = 0; size <= Matrix_size[i]; i++)
     {
-        matTransposeMPI(transposed_parallel, N, size, rank);
+
+        if (n % size != 0) {
+            break;
+        }
+
+        float **matrix = new float *[Matrix_size[i]];
+        float **transposed_serial = new float *[Matrix_size[i]];
+        float **transposed_parallel = new float *[Matrix_size[i]];
+
+        srand(time(0));
+
+        // Inizialize the matrix
+        for (int j = 0; j < Matrix_size[i]; j++)
+        {
+            matrix[j] = new float[Matrix_size[i]];
+            transposed_serial[j] = new float[Matrix_size[i]];
+            transposed_parallel[j] = new float[Matrix_size[i]];
+            for (int k = 0; k < Matrix_size[i]; k++)
+            {
+                matrix[j][k] = (float)(rand() % 100 + 1);
+                transposed_serial[j][k] = matrix[j][k];
+                transposed_parallel[j][k] = matrix[j][k];
+            }
+        }
+
+        if(rank == 0) {
+            ResultFile << "Matrix size" << endl
+                       << Matrix_size[i] << endl;
+
+            ResultFile << "Cores" << "," << "Serial Time" << "," << "Parallel Time" << "," << "SpeedUp" << endl;
+        }
+
+        double start_serial = MPI_Wtime();
+
+        if (!checkSym(matrix, Matrix_size[i]))
+        {
+            matTranspose(transposed_serial, Matrix_size[i]);
+        }
+
+        double end_serial = MPI_Wtime();
+        double duration_serial = (end_serial - start_serial);
+
+        for (int k = 0; k < 10; k++)
+        {
+            double start_parallel = MPI_Wtime();
+
+            if (!checkSymMPI(matrix, Matrix_size[i], num_thread))
+            {
+                matTransposeMPI(transposed_parallel, Matrix_size[i], block_Matrix_size[j], num_thread);
+            }
+            
+            double end_parallel = MPI_Wtime();
+            double duration_parallel = (end_parallel - start_parallel)
+            ResultFile << num_thread << "," << duration_serial << "," << duration_parallel << "," << duration_serial / duration_parallel << endl;
+        }
+
+        // Cleanup memory
+        for (int j = 0; j < Matrix_size[i]; j++)
+        {
+            delete[] matrix[j];
+            delete[] transposed_serial[j];
+            delete[] transposed_parallel[j];
+        }
+        delete[] matrix;
+        delete[] transposed_serial;
+        delete[] transposed_parallel;
     }
 
-    double end_parallel = MPI_Wtime();
-    double duration_parallel = (end_parallel - start_parallel);
-    double bandwidth_parallel = data_transferred / (duration_parallel * 1e9);
-
-    // Printing result
-    if (rank == 0)
-    {
-        // Serial
-        cout << "Time taken by serial: " << duration_serial << " seconds" << endl;
-        cout << "Effective Serial Bandwidth: " << bandwidth_serial << " GB/s" << endl
-             << endl;
-
-        // Parallel
-        cout << "Time taken by RowWise: " << duration_parallel << " seconds" << endl;
-        cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl
-             << endl;
-
-        // Check
-        cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
+    if (rank == 0) {
+        ResultFile.close();
     }
-
-    // Finalize MPI
-    MPI_Finalize();
-
-    // Cleanup memory
-    for (int i = 0; i < N; i++)
-    {
-        delete[] matrix[i];
-        delete[] transposed_serial[i];
-        delete[] transposed_parallel[i];
-    }
-    delete[] matrix;
-    delete[] transposed_serial;
-    delete[] transposed_parallel;
 
     return 0;
 }

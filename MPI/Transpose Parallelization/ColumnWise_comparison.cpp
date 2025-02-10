@@ -222,18 +222,6 @@ int main(int argc, char *argv[])
         cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl
              << endl;
 
-        cout << endl;
-
-        printMatrix(matrix, N);
-
-        cout << endl;
-
-        printMatrix(transposed_serial, N);
-
-        cout << endl;
-
-        printMatrix(transposed_parallel, N);
-
         // Check
         cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
     }

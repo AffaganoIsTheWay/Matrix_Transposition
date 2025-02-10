@@ -1,0 +1,24 @@
+#!/bin/bash
+# Job name
+#PBS -N Transpose_Giovanni
+# Queue name
+#PBS -q short_cpuQ
+# Set the maximum wall time
+#PBS -l walltime=0:30:00
+# Number of nodes, cpus, mpi processors and amount of memory
+#PBS -l select=1:ncpus=64:ompthreads=64:mem=16gb
+
+# Modules for C++ and MPI
+module load gcc91
+module load mpich-3.2.1--gcc-9.1.0
+
+# Select the working directory
+cd /home/giovanni.vitiello/Matrix_Transpose/
+
+# The code should be compiled before submitting the job
+mpicxx MPI_main.cpp -o main
+
+# Run code
+for i in  {1..64} ; do
+    mpirun -np "$i" ./main
+done
