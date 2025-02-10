@@ -5,8 +5,6 @@
 #include <omp.h>
 #include <algorithm>
 
-// -ffinite-loops -funroll-loops -faggressive-loop-optimizations -floop-nest-optimize -O1
-
 using namespace std;
 
 // Function to transpose a matrix

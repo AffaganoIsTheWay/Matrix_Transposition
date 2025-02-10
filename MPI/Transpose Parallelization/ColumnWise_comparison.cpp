@@ -75,16 +75,25 @@ void matTransposeMPI(float **transposed, int N, int size, int rank) {
         }
     }
 
+    if (rank == 0){
+        for(int i = 0; i < column_per_process; i++){
+            for(int j = 0; j < N; j++){
+                cout << local_matrix[i][j] << " ";
+            }
+            cout << endl;
+        }
+    }
+
     int sizes[2] = {N, N};
-    int subsizes[2] = {column_per_process, 1};
+    int subsizes[2] = {1, column_per_process};
     int start[2] = {0,0};
     MPI_Datatype type, subarrtype;
     MPI_Type_create_subarray(2, sizes, subsizes, start, MPI_ORDER_C, MPI_FLOAT, &type);
     MPI_Type_create_resized(type, 0, column_per_process*sizeof(float), &subarrtype);
     MPI_Type_commit(&subarrtype);
 
-    int sendcounts[column_per_process];
-    int displs[column_per_process];
+    int sendcounts[column_per_process*N];
+    int displs[column_per_process*N];
 
     if (rank == 0) {
         int disp = 0;
@@ -95,9 +104,11 @@ void matTransposeMPI(float **transposed, int N, int size, int rank) {
         }
     }
 
-    for(int i = 0; i < N; i++){
-        MPI_Gatherv(&(local_matrix[0][i]), column_per_process, MPI_FLOAT,
-                &(transposed[column_start][i]), sendcounts, displs, subarrtype, 0, MPI_COMM_WORLD);
+    for(int j = 0; j < column_per_process; j++){
+        for(int i = 0; i < N; i++){
+            MPI_Gatherv(&(local_matrix[j][i]), column_per_process, MPI_FLOAT,
+                        &(transposed[column_start+j][i]), sendcounts, displs, subarrtype, 0, MPI_COMM_WORLD);
+        }
     }
 }
 
@@ -211,7 +222,7 @@ int main(int argc, char *argv[])
         cout << "Effective Parallel Bandwidth: " << bandwidth_parallel << " GB/s" << endl
              << endl;
 
-        /* cout << endl;
+        cout << endl;
 
         printMatrix(matrix, N);
 
@@ -222,7 +233,7 @@ int main(int argc, char *argv[])
         cout << endl;
 
         printMatrix(transposed_parallel, N);
- */
+
         // Check
         cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
     }
