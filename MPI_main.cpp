@@ -7,25 +7,15 @@
 using namespace std;
 
 // Function to transpose a matrix
-void matTranspose(float *transposed, int N)
-{
-    float** local_matrix = new float*[N];
-    for(int i = 0; i < N; i++){
-        local_matrix[i] = new float[N];
-        for(int j = 0; j < N; j++){ 
-            local_matrix[i * N + j] = 0;
-        }
-    }
-
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            local_matrix[i * N + j] = transposed[j * N + i];
-        }
-    }
-
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            transposed[i * N + j] = local_matrix[i * N + j];
+void matTranspose(float *transposed, int N) {
+    float temp;
+    for (int i = 0; i < N; i++) {
+        for (int j = i + 1; j < N; j++) {
+            if (transposed[i * N + j] != transposed[j * N + i]) {
+                temp = transposed[i * N + j];
+                transposed[i * N + j] = transposed[j * N + i];
+                transposed[j * N + i] = temp;
+            }
         }
     }
 }
@@ -76,6 +66,7 @@ bool checkSymMPI(float *matrix, int N, int size, int rank)
     int start_col = (rank % (N / block_size)) * block_size;
     int end_col = start_col + block_size;
 
+    // Each process checks its block of the matrix
     for (int i = start_row; i < end_row; i++)
     {
         for (int j = start_col; j < end_col; j++)
@@ -117,14 +108,14 @@ int main(int argc, char *argv[])
             break;
         }
 
-        float *matrix = new float [Matrix_size[i]];
-        float *transposed_serial = new float [Matrix_size[i]];
-        float *transposed_parallel = new float [Matrix_size[i]];
+        float *matrix = new float [Matrix_size[i]*Matrix_size[i]];
+        float *transposed_serial = new float [Matrix_size[i]*Matrix_size[i]];
+        float *transposed_parallel = new float [Matrix_size[i]*Matrix_size[i]];
 
         srand(time(0));
 
         // Inizialize the matrix
-        for (int j = 0; j < Matrix_size[i]; j++)
+        for (int j = 0; j < Matrix_size[i]*Matrix_size[i]; j++)
         {
             matrix[j] = (float)(rand() % 100 + 1);
             transposed_serial[j] = matrix[j];

@@ -81,7 +81,7 @@ void printMatrix(float* matrix, int n) {
     }
 }
 
-bool checkSym_MPI(float *matrix, int N, int size, int rank)
+bool checkSymMPI(float *matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int block_size = N / size;
