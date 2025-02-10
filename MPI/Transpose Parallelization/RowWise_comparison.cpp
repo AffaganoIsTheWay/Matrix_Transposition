@@ -52,7 +52,7 @@ bool check_transpose(float *transposed_serial, float *transposed_parallel, int N
 }
 
 // Function to transpose a matrix using MPI
-void matTransposeMPI(float *transposed, float *matrix, int N, int size, int rank) {
+void matTransposeMPI(float *transposed, int N, int size, int rank) {
     int row_per_process = N / size;
     int row_start = rank * row_per_process;
     int row_end = (rank + 1) * row_per_process;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 
     if (!checkSym_MPI(matrix, N, size, rank))
     {
-        matTransposeMPI(transposed_parallel, matrix, N, size, rank);
+        matTransposeMPI(transposed_parallel, N, size, rank);
     }
 
     double end_parallel = MPI_Wtime();
@@ -178,8 +178,6 @@ int main(int argc, char *argv[])
         // Check
         cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Finalize MPI
     MPI_Finalize();
