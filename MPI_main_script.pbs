@@ -19,6 +19,6 @@ cd /home/giovanni.vitiello/Matrix_Transpose/
 mpicxx MPI_main.cpp -o main
 
 # Run code
-for i in  {1..64} ; do
+for i in  {1,2,4,8,16,32,64} ; do
     mpirun -np "$i" ./main
 done

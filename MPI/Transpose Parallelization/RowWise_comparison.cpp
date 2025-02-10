@@ -98,18 +98,16 @@ bool checkSym_MPI(float *matrix, int N, int size, int rank)
             if (matrix[i * N + j] != matrix[j * N + i])
             {
                 local_result = false;
-                break; // No need to check further
+                break;
             }
         }
         if (!local_result)
-            break; // No need to check further rows if we already found an inconsistency
+            break;
     }
 
-    // Use MPI to gather results from all processes
     bool global_result;
     MPI_Reduce(&local_result, &global_result, 1, MPI_C_BOOL, MPI_LAND, 0, MPI_COMM_WORLD);
 
-    // The root process (rank 0) determines if the matrix is symmetric
     return global_result;
 }
 
