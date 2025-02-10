@@ -11,7 +11,7 @@ void matTranspose(float **transposed, int N)
     float** local_matrix = new float*[N];
     for(int i = 0; i < N; i++){
         local_matrix[i] = new float[N];
-        for(int j = 0; j < row_per_process; j++){
+        for(int j = 0; j < N; j++){
             local_matrix[i][j] = 0;
         }
     }
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
     double end_serial = MPI_Wtime();
     double duration_serial = (end_serial - start_serial);
-    double data_transferred = 2.0 * (N * N) * sizeof(float);
+    double data_transferred = 4.0 * (N * N) * sizeof(float);
     double bandwidth_serial = data_transferred / (duration_serial * 1e9);
 
     // Row Wise

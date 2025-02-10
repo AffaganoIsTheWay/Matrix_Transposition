@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <mpi.h>
-#include <algorithm>
 
 using namespace std;
 
@@ -13,7 +12,7 @@ void matTranspose(float **transposed, int N)
     float** local_matrix = new float*[N];
     for(int i = 0; i < N; i++){
         local_matrix[i] = new float[N];
-        for(int j = 0; j < row_per_process; j++){
+        for(int j = 0; j < N; j++){ 
             local_matrix[i][j] = 0;
         }
     }
@@ -48,7 +47,7 @@ bool checkSym(float **matrix, int N)
 }
 
 // Function to transpose a matrix using MPI
-void matTransposeMPI(float** transposed, int N, int block_Matrix_size, int num_thread) {
+void matTransposeMPI(float **transposed, int N, int size, int rank) {
     int row_per_process = N / size;
     int row_start = rank * row_per_process;
     int row_end = (rank + 1) * row_per_process;
@@ -93,7 +92,7 @@ void matTransposeMPI(float** transposed, int N, int block_Matrix_size, int num_t
     }
 }
 
-bool checkSymMPI(float **matrix, int N, int num_thread)
+bool checkSymMPI(float **matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int block_size = N / size;
@@ -125,16 +124,16 @@ bool checkSymMPI(float **matrix, int N, int num_thread)
     return global_result;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 
+    ofstream ResultFile;
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if(rank == 0) {
-        ofstream ResultFile;
         ResultFile.open("result.csv", ios_base::app);
     }
 
@@ -142,7 +141,7 @@ int main()
     for (int i = 0; size <= Matrix_size[i]; i++)
     {
 
-        if (n % size != 0) {
+        if (Matrix_size[i] % size != 0) {
             break;
         }
 
@@ -187,14 +186,14 @@ int main()
         {
             double start_parallel = MPI_Wtime();
 
-            if (!checkSymMPI(matrix, Matrix_size[i], num_thread))
+            if (!checkSymMPI(matrix, Matrix_size[i], size, rank))
             {
-                matTransposeMPI(transposed_parallel, Matrix_size[i], block_Matrix_size[j], num_thread);
+                matTransposeMPI(transposed_parallel, Matrix_size[i], size, rank);
             }
             
             double end_parallel = MPI_Wtime();
-            double duration_parallel = (end_parallel - start_parallel)
-            ResultFile << num_thread << "," << duration_serial << "," << duration_parallel << "," << duration_serial / duration_parallel << endl;
+            double duration_parallel = (end_parallel - start_parallel);
+            ResultFile << size << "," << duration_serial << "," << duration_parallel << "," << duration_serial / duration_parallel << endl;
         }
 
         // Cleanup memory
