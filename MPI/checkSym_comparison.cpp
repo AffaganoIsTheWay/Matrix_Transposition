@@ -5,10 +5,10 @@
 
 using namespace std;
 
-bool checkSym(float** matrix, int N){
+bool checkSym(float* matrix, int N){
     for (int i = 0; i < N; i++) {
         for (int j = i+1; j < N; j++) {
-            if(matrix[i][j] != matrix[j][i]){
+            if(matrix[i * N + j] != matrix[j * N + i]){
                 return 0;
             }
         }
@@ -17,7 +17,7 @@ bool checkSym(float** matrix, int N){
     return 1;
 }
 
-bool checkSym_RowWise(float **matrix, int N, int size, int rank)
+bool checkSym_RowWise(float *matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int rows_per_process = N / size;
@@ -29,7 +29,7 @@ bool checkSym_RowWise(float **matrix, int N, int size, int rank)
     {
         for (int j = i + 1; j < N; j++)
         {
-            if (matrix[i][j] != matrix[j][i])
+            if (matrix[i * N + j] != matrix[j * N + i])
             {
                 local_result = false;
                 break; // No need to check further
@@ -49,7 +49,7 @@ bool checkSym_RowWise(float **matrix, int N, int size, int rank)
 
 
 
-bool checkSym_ColumnWise(float **matrix, int N, int size, int rank)
+bool checkSym_ColumnWise(float *matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int cols_per_process = N / size;
@@ -61,7 +61,7 @@ bool checkSym_ColumnWise(float **matrix, int N, int size, int rank)
     {
         for (int j = start_col; j < end_col; j++)
         {
-            if (matrix[i][j] != matrix[j][i])
+            if (matrix[i * N + j] != matrix[j * N + i])
             {
                 local_result = false;
                 break; // No need to check further
@@ -79,7 +79,7 @@ bool checkSym_ColumnWise(float **matrix, int N, int size, int rank)
     return global_result;
 }
 
-bool checkSym_BlockWise(float **matrix, int N, int size, int rank)
+bool checkSym_BlockWise(float *matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int block_size = N / size;
@@ -93,7 +93,7 @@ bool checkSym_BlockWise(float **matrix, int N, int size, int rank)
     {
         for (int j = start_col; j < end_col; j++)
         {
-            if (matrix[i][j] != matrix[j][i])
+            if (matrix[i * N + j] != matrix[j * N + i])
             {
                 local_result = false;
                 break; // No need to check further
@@ -113,15 +113,14 @@ bool checkSym_BlockWise(float **matrix, int N, int size, int rank)
 
 int main(int argc, char* argv[]) {
     int N = atoi( argv[1] );
-    float** matrix = new float*[N];
+    float* matrix = new float[N*N];
 
     srand(time(NULL));
     
     //Inizialize the matrix
     for (int i = 0; i < N; i++){
-        matrix[i] = new float[N];
         for (int j = 0; j < N; j++){
-            matrix[i][j] = (float)(rand() % 100 + 1);
+            matrix[i* N + j] = (float)(rand() % 100 + 1);
         }
     }
 
@@ -190,9 +189,6 @@ int main(int argc, char* argv[]) {
     MPI_Finalize();
 
     // Cleanup memory
-    for (int i = 0; i < N; i++) {
-        delete[] matrix[i];
-    }
     delete[] matrix;
 
     return 0;

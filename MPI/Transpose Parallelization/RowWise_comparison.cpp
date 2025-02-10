@@ -6,36 +6,26 @@
 using namespace std;
 
 // Function to transpose a matrix
-void matTranspose(float **transposed, int N)
-{
-    float** local_matrix = new float*[N];
-    for(int i = 0; i < N; i++){
-        local_matrix[i] = new float[N];
-        for(int j = 0; j < N; j++){
-            local_matrix[i][j] = 0;
-        }
-    }
-
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            local_matrix[i][j] = transposed[j][i];
-        }
-    }
-
-    for(int i = 0; i < N; i++){
-        for(int j = 0; j < N; j++){
-            transposed[i][j] = local_matrix[i][j];
+void matTranspose(float *transposed, int N) {
+    float temp;
+    for (int i = 0; i < N; i++) {
+        for (int j = i + 1; j < N; j++) {
+            if (transposed[i * N + j] != transposed[j * N + i]) {
+                temp = transposed[i * N + j];
+                transposed[i * N + j] = transposed[j * N + i];
+                transposed[j * N + i] = temp;
+            }
         }
     }
 }
 
-bool checkSym(float **matrix, int N)
+bool checkSym(float *matrix, int N)
 {
     for (int i = 0; i < N; i++)
     {
         for (int j = i + 1; j < N; j++)
         {
-            if (matrix[i][j] != matrix[j][i])
+            if (matrix[i * N + j] != matrix[j * N + i])
             {
                 return false;
             }
@@ -45,13 +35,13 @@ bool checkSym(float **matrix, int N)
     return true;
 }
 
-bool check_transpose(float **transposed_serial, float **transposed_parallel, int N)
+bool check_transpose(float *transposed_serial, float *transposed_parallel, int N)
 {
     for (int i = 0; i < N; ++i)
     {
         for (int j = 0; j < N; ++j)
         {
-            if (transposed_serial[i][j] != transposed_parallel[i][j])
+            if (transposed_serial[i * N + j] != transposed_parallel[i * N + j])
             {
                 return false;
             }
@@ -62,52 +52,36 @@ bool check_transpose(float **transposed_serial, float **transposed_parallel, int
 }
 
 // Function to transpose a matrix using MPI
-void matTransposeMPI(float **transposed, int N, int size, int rank) {
+void matTransposeMPI(float *transposed, float *matrix, int N, int size, int rank) {
     int row_per_process = N / size;
     int row_start = rank * row_per_process;
     int row_end = (rank + 1) * row_per_process;
 
-    float** local_matrix = new float*[N];
-    for(int i = 0; i < N; i++){
-        local_matrix[i] = new float[row_per_process];
-        for(int j = 0; j < row_per_process; j++){
-            local_matrix[i][j] = 0;
+    float *local_matrix = new float[N*row_per_process];
+    
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < row_per_process; j++) {
+            local_matrix[i * row_per_process + j] = transposed[(row_start + j) * N + i];
         }
     }
-
+    
     for(int i = 0; i < N; i++){
-        for(int j = 0, x = row_start; j < row_per_process; j++, x++){
-            local_matrix[i][j] = transposed[x][i];
-        }
+        MPI_Gather(&(local_matrix[i * row_per_process]), row_per_process, MPI_FLOAT,
+            &(transposed[i * N + row_start]), row_per_process, MPI_FLOAT, 0, MPI_COMM_WORLD);
     }
 
-    int sizes[2] = {N, N};
-    int subsizes[2] = {1, row_per_process};
-    int start[2] = {0,0};
-    MPI_Datatype type, subarrtype;
-    MPI_Type_create_subarray(2, sizes, subsizes, start, MPI_ORDER_C, MPI_FLOAT, &type);
-    MPI_Type_create_resized(type, 0, row_per_process*sizeof(float), &subarrtype);
-    MPI_Type_commit(&subarrtype);
+}
 
-    int sendcounts[row_per_process];
-    int displs[row_per_process];
-
-    if (rank == 0) {
-        int disp = 0;
-        for(int i = 0; i < row_per_process; i++){
-            sendcounts[i] = 1;
-            displs[i] = disp;
-            disp += 1;
+void printMatrix(float* matrix, int n) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            cout << matrix[i * n + j] << " "; 
         }
-    }
-
-    for(int i = 0; i < N; i++){
-        MPI_Gatherv(&(local_matrix[i][0]), row_per_process, MPI_FLOAT,
-                &(transposed[i][row_start]), sendcounts, displs, subarrtype, 0, MPI_COMM_WORLD);
+        cout << endl;
     }
 }
 
-bool checkSym_MPI(float **matrix, int N, int size, int rank)
+bool checkSym_MPI(float *matrix, int N, int size, int rank)
 {
     bool local_result = true;
     int block_size = N / size;
@@ -121,7 +95,7 @@ bool checkSym_MPI(float **matrix, int N, int size, int rank)
     {
         for (int j = start_col; j < end_col; j++)
         {
-            if (matrix[i][j] != matrix[j][i])
+            if (matrix[i * N + j] != matrix[j * N + i])
             {
                 local_result = false;
                 break; // No need to check further
@@ -142,24 +116,17 @@ bool checkSym_MPI(float **matrix, int N, int size, int rank)
 int main(int argc, char *argv[])
 {
     int N = atoi(argv[1]);
-    float **matrix = new float *[N];
-    float **transposed_serial = new float *[N];
-    float **transposed_parallel = new float *[N];
+    float *matrix = new float [N*N];
+    float *transposed_serial = new float [N*N];
+    float *transposed_parallel = new float [N*N];
 
     srand(time(NULL));
 
     // Inizialize the matrix
-    for (int i = 0; i < N; i++)
-    {
-        matrix[i] = new float[N];
-        transposed_serial[i] = new float[N];
-        transposed_parallel[i] = new float[N];
-        for (int j = 0; j < N; j++)
-        {
-            matrix[i][j] = (float)(rand() % 100 + 1);
-            transposed_serial[i][j] = matrix[i][j];
-            transposed_parallel[i][j] = matrix[i][j];
-        }
+    for (int i = 0; i < N * N; i++) {
+        matrix[i] = (float)(rand() % 100 + 1);
+        transposed_serial[i] = matrix[i];
+        transposed_parallel[i] = matrix[i];
     }
 
     // Inizialize MPI
@@ -188,7 +155,7 @@ int main(int argc, char *argv[])
 
     if (!checkSym_MPI(matrix, N, size, rank))
     {
-        matTransposeMPI(transposed_parallel, N, size, rank);
+        matTransposeMPI(transposed_parallel, matrix, N, size, rank);
     }
 
     double end_parallel = MPI_Wtime();
@@ -212,19 +179,10 @@ int main(int argc, char *argv[])
         cout << "Check transposed Matrix:" << check_transpose(transposed_serial, transposed_parallel, N) << endl;
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Finalize MPI
     MPI_Finalize();
-
-    // Cleanup memory
-    for (int i = 0; i < N; i++)
-    {
-        delete[] matrix[i];
-        delete[] transposed_serial[i];
-        delete[] transposed_parallel[i];
-    }
-    delete[] matrix;
-    delete[] transposed_serial;
-    delete[] transposed_parallel;
 
     return 0;
 }
